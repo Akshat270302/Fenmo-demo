@@ -1,4 +1,7 @@
-const { createExpenseService } = require("../services/expenses.service");
+const {
+  createExpenseService,
+  getExpensesService,
+} = require("../services/expenses.service");
 const { errorResponse, successResponse } = require("../utils/errors");
 const { paiseToRupees, rupeesToPaise } = require("../utils/money");
 
@@ -77,6 +80,31 @@ const createExpense = async (req, res) => {
   }
 };
 
+const getExpenses = async (req, res) => {
+  const categoryParam =
+    typeof req.query.category === "string" ? req.query.category.trim() : "";
+
+  if (req.query.category !== undefined && !categoryParam) {
+    return res
+      .status(400)
+      .json(errorResponse("Category must be non-empty", "VALIDATION_ERROR"));
+  }
+
+  try {
+    const result = await getExpensesService({
+      category: categoryParam || null,
+    });
+
+    return res.status(200).json(successResponse(result));
+  } catch (err) {
+    console.error("Failed to fetch expenses", err);
+    return res
+      .status(500)
+      .json(errorResponse("Internal server error", "SERVER_ERROR"));
+  }
+};
+
 module.exports = {
   createExpense,
+  getExpenses,
 };

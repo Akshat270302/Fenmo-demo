@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require("uuid");
 const { db } = require("../db");
+const { paiseToRupees } = require("../utils/money");
 
 const getExpenseByIdempotencyKey = (key) => {
   return new Promise((resolve, reject) => {
@@ -88,6 +89,40 @@ const createExpenseService = async (input) => {
   }
 };
 
+const getExpensesService = ({ category }) => {
+  const baseQuery =
+    "SELECT id, amount, category, description, date, created_at, idempotency_key FROM expenses";
+  const params = [];
+  let sql = baseQuery;
+
+  if (category) {
+    sql += " WHERE category = ?";
+    params.push(category);
+  }
+
+  sql += " ORDER BY date DESC, created_at DESC";
+
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) {
+        return reject(err);
+      }
+
+      const totalPaise = rows.reduce((sum, row) => sum + row.amount, 0);
+      const expenses = rows.map((row) => ({
+        ...row,
+        amount: paiseToRupees(row.amount),
+      }));
+
+      return resolve({
+        expenses,
+        total: paiseToRupees(totalPaise),
+      });
+    });
+  });
+};
+
 module.exports = {
   createExpenseService,
+  getExpensesService,
 };
