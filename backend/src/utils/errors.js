@@ -1,7 +1,7 @@
 const successResponse = (data) => {
   return {
     success: true,
-    data: data || {},
+    data,
     error: null,
   };
 };
@@ -11,8 +11,8 @@ const errorResponse = (message, code) => {
     success: false,
     data: null,
     error: {
-      message: message || "Error",
-      code: code || "ERROR",
+      message,
+      code,
     },
   };
 };
