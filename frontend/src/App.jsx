@@ -326,7 +326,6 @@ const App = () => {
             <p className="label">Filtered total</p>
             <div className="total-hero">
               <span className="total-value">₹{rangeTotal}</span>
-              <span className="badge positive">+12.5% from last month</span>
             </div>
           </section>
 
