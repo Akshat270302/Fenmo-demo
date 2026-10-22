@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ExpenseForm from "./components/ExpenseForm.jsx";
 import ExpenseSummary from "./components/ExpenseSummary.jsx";
 import ExpenseTable from "./components/ExpenseTable.jsx";
+import Chatbot from "./components/Chatbot.jsx";
 import { createExpense, getExpenses } from "./api/expenses.js";
 
 const App = () => {
@@ -82,6 +83,13 @@ const App = () => {
     setSelectedCategory(value);
     await loadExpenses(value || "");
   };
+
+  // The assistant can create expenses through the chat tool, so the dashboard
+  // has to reload whenever a chat turn produced a new record.
+  const handleChatCreated = useCallback(async () => {
+    await refreshCategories();
+    await loadExpenses(selectedCategory || "");
+  }, [refreshCategories, loadExpenses, selectedCategory]);
 
   const summaryCategories = useMemo(() => categories, [categories]);
   const visibleExpenses = useMemo(() => {
@@ -219,6 +227,7 @@ const App = () => {
 
       <div className="stack">
         <ExpenseForm onCreate={handleCreate} submitting={submitting} />
+        <Chatbot onExpenseCreated={handleChatCreated} />
         <ExpenseSummary
           categories={summaryCategories}
           total={visibleTotal}
@@ -381,7 +390,7 @@ const App = () => {
           <div className="user-card">
             <div className="avatar">AM</div>
             <div>
-              <p className="user-name">Arjun Mehta</p>
+              <p className="user-name">Akshat Neema</p>
               <span className="muted">Premium plan</span>
             </div>
           </div>

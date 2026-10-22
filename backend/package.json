@@ -5,10 +5,16 @@
   "type": "commonjs",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "test": "node tests/config-check.js && node tests/chat-tools.js",
+    "test:config": "node tests/config-check.js",
+    "test:tools": "node tests/chat-tools.js",
+    "test:smoke": "node tests/api-smoke.js"
   },
   "dependencies": {
+    "@google/genai": "^2.30.0",
     "cors": "^2.8.5",
+    "dotenv": "^18.0.8",
     "express": "^4.19.2",
     "sqlite3": "^5.1.7",
     "uuid": "^9.0.1"

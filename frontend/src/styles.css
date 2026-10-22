@@ -650,6 +650,136 @@ body {
   font-size: 12px;
 }
 
+/* ------------------------------------------------------------------ */
+/* Chatbot                                                            */
+/* ------------------------------------------------------------------ */
+
+.chat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 140px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid #1f2430;
+  border-radius: 14px;
+  background: #111318;
+}
+
+.chat-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chat-suggestion {
+  background: #1b1f2a;
+  border: 1px solid #2a2f3a;
+  border-radius: 999px;
+  padding: 7px 12px;
+  color: #e5e7eb;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.chat-suggestion:hover:not(:disabled) {
+  border-color: #0ea5e9;
+  color: #38bdf8;
+}
+
+.chat-suggestion:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chat-bubble {
+  max-width: 82%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-bubble.from-user {
+  align-self: flex-end;
+  background: #0ea5e9;
+  color: #0b0d12;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-bubble.from-bot {
+  align-self: flex-start;
+  background: #1b1f2a;
+  border: 1px solid #2a2f3a;
+  color: #e5e7eb;
+  border-bottom-left-radius: 4px;
+}
+
+.chat-typing {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.chat-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.chat-input-row input {
+  border: 1px solid #2a2f3a;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #e5e7eb;
+  background: #1b1f2a;
+}
+
+.chat-input-row input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+}
+
+.chat-retry {
+  margin-left: 10px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid #f87171;
+  background: transparent;
+  color: #fca5a5;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chat-retry:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.chat-retry:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @media (max-width: 640px) {
   .app-shell {
     flex-direction: column;

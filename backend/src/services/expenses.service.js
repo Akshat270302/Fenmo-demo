@@ -122,7 +122,168 @@ const getExpensesService = ({ category }) => {
   });
 };
 
+// ---------------------------------------------------------------------------
+// Query helpers used by the chat agent's `query_expenses` tool.
+//
+// The model never supplies SQL. These helpers own every SQL string; the
+// model's arguments are only ever bound as parameter values.
+// ---------------------------------------------------------------------------
+
+const CATEGORY_ALIASES = {
+  food: "Food & Dining",
+  "food & dining": "Food & Dining",
+  "food and dining": "Food & Dining",
+  dining: "Food & Dining",
+  restaurant: "Food & Dining",
+  groceries: "Food & Dining",
+  travel: "Travel",
+  transport: "Travel",
+  clothes: "clothes",
+  clothing: "clothes",
+  apparel: "clothes",
+};
+
+const getDistinctCategoriesService = () => {
+  return new Promise((resolve, reject) => {
+    db.all(
+      "SELECT category, COUNT(1) AS count, SUM(amount) AS total FROM expenses GROUP BY category ORDER BY category",
+      [],
+      (err, rows) => {
+        if (err) {
+          return reject(err);
+        }
+
+        return resolve(
+          rows.map((row) => ({
+            category: row.category,
+            count: row.count,
+            total: paiseToRupees(row.total),
+          }))
+        );
+      }
+    );
+  });
+};
+
+/**
+ * Maps a model-supplied category onto a category that actually exists in the
+ * database. Returns `{ category: null }` when nothing matches so the agent can
+ * report the real category list instead of querying with a guessed value.
+ */
+const resolveCategoryFilter = (requested, availableCategories) => {
+  const needle = String(requested || "").trim().toLowerCase();
+
+  if (!needle) {
+    return { category: null, matched: false };
+  }
+
+  const exact = availableCategories.find(
+    (item) => item.category.toLowerCase() === needle
+  );
+  if (exact) {
+    return { category: exact.category, matched: true };
+  }
+
+  const alias = CATEGORY_ALIASES[needle];
+  if (alias) {
+    const aliasMatch = availableCategories.find(
+      (item) => item.category.toLowerCase() === alias.toLowerCase()
+    );
+    if (aliasMatch) {
+      return { category: aliasMatch.category, matched: true };
+    }
+  }
+
+  const partial = availableCategories.find(
+    (item) =>
+      item.category.toLowerCase().includes(needle) ||
+      needle.includes(item.category.toLowerCase())
+  );
+  if (partial) {
+    return { category: partial.category, matched: true };
+  }
+
+  return { category: null, matched: false };
+};
+
+const queryExpensesService = async ({ category, startDate, endDate }) => {
+  const availableCategories = await getDistinctCategoriesService();
+  const resolved = resolveCategoryFilter(category, availableCategories);
+
+  const conditions = [];
+  const params = [];
+
+  if (resolved.category) {
+    conditions.push("category = ?");
+    params.push(resolved.category);
+  }
+
+  if (startDate) {
+    conditions.push("date(date) >= date(?)");
+    params.push(startDate);
+  }
+
+  if (endDate) {
+    conditions.push("date(date) <= date(?)");
+    params.push(endDate);
+  }
+
+  const whereClause = conditions.length
+    ? ` WHERE ${conditions.join(" AND ")}`
+    : "";
+
+  const rows = await new Promise((resolve, reject) => {
+    db.all(
+      "SELECT id, amount, category, description, date, created_at FROM expenses" +
+        whereClause +
+        " ORDER BY date DESC, created_at DESC",
+      params,
+      (err, result) => {
+        if (err) {
+          return reject(err);
+        }
+        return resolve(result);
+      }
+    );
+  });
+
+  const totalPaise = rows.reduce((sum, row) => sum + row.amount, 0);
+
+  const categoryTotals = new Map();
+  rows.forEach((row) => {
+    const current = categoryTotals.get(row.category) || {
+      category: row.category,
+      count: 0,
+      totalPaise: 0,
+    };
+    current.count += 1;
+    current.totalPaise += row.amount;
+    categoryTotals.set(row.category, current);
+  });
+
+  return {
+    expenses: rows.map((row) => ({
+      ...row,
+      amount: paiseToRupees(row.amount),
+    })),
+    total: paiseToRupees(totalPaise),
+    count: rows.length,
+    byCategory: Array.from(categoryTotals.values())
+      .map((item) => ({
+        category: item.category,
+        count: item.count,
+        total: paiseToRupees(item.totalPaise),
+      }))
+      .sort((a, b) => Number(b.total) - Number(a.total)),
+    availableCategories: availableCategories.map((item) => item.category),
+    resolvedCategory: resolved.category,
+  };
+};
+
 module.exports = {
   createExpenseService,
   getExpensesService,
+  getDistinctCategoriesService,
+  resolveCategoryFilter,
+  queryExpensesService,
 };

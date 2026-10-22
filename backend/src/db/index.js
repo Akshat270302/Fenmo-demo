@@ -5,11 +5,21 @@ const sqlite3 = require("sqlite3").verbose();
 const dataDir = path.join(__dirname, "../../data");
 const dbPath = path.join(dataDir, "expenses.db");
 
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+// Tests point this at a throwaway database so real expense data is never
+// touched. It is read from the environment, never from model output.
+const configuredDbPath = process.env.FENMO_DB_PATH;
+
+const resolvedDbPath = configuredDbPath
+  ? path.resolve(configuredDbPath)
+  : dbPath;
+
+const resolvedDataDir = path.dirname(resolvedDbPath);
+
+if (!fs.existsSync(resolvedDataDir)) {
+  fs.mkdirSync(resolvedDataDir, { recursive: true });
 }
 
-const db = new sqlite3.Database(dbPath);
+const db = new sqlite3.Database(resolvedDbPath);
 
 const initDB = () => {
   const schemaPath = path.join(__dirname, "../migrations/001_create_expenses.sql");
