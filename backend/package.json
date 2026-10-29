@@ -6,9 +6,11 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "node tests/config-check.js && node tests/chat-tools.js",
+    "test": "node tests/config-check.js && node tests/categories.js && node tests/chat-tools.js && node tests/api-categories.js",
     "test:config": "node tests/config-check.js",
+    "test:categories": "node tests/categories.js",
     "test:tools": "node tests/chat-tools.js",
+    "test:api": "node tests/api-categories.js",
     "test:smoke": "node tests/api-smoke.js"
   },
   "dependencies": {

@@ -4,6 +4,11 @@ const {
   queryExpensesService,
 } = require("../services/expenses.service");
 const { paiseToRupees, rupeesToPaise } = require("../utils/money");
+const {
+  EXPENSE_CATEGORIES,
+  resolveCanonicalCategory,
+  resolveCategoryAlias,
+} = require("../config/categories");
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_DATETIME_REGEX =
@@ -237,7 +242,8 @@ const toolDeclarations = [
         category: {
           type: Type.STRING,
           description:
-            "Optional category filter, e.g. 'Food & Dining'. Must match an existing category.",
+            "Optional category filter. Must be one of the supported categories; synonyms like 'food' are resolved to 'Food & Dining'.",
+          enum: [...EXPENSE_CATEGORIES],
         },
       },
       required: [],
@@ -256,7 +262,9 @@ const toolDeclarations = [
         },
         category: {
           type: Type.STRING,
-          description: "Category, e.g. 'Food & Dining'.",
+          description:
+            "Category of the expense. Must be one of the supported categories.",
+          enum: [...EXPENSE_CATEGORIES],
         },
         description: {
           type: Type.STRING,
@@ -318,6 +326,20 @@ const runCreateExpense = async (rawArgs, context) => {
     throw new ToolInputError("category is too long.");
   }
 
+  // The model may only ever create a record with one of the canonical
+  // categories. A well-known synonym is mapped onto its canonical category so
+  // the stored value stays consistent with the rest of the app.
+  const canonicalCategory =
+    resolveCanonicalCategory(category) || resolveCategoryAlias(category);
+  if (!canonicalCategory) {
+    throw new ToolInputError(
+      `"${category}" is not a supported category. Use one of: ${EXPENSE_CATEGORIES.join(
+        ", "
+      )}.`,
+      "UNSUPPORTED_CATEGORY"
+    );
+  }
+
   const description =
     args.description === undefined || args.description === null
       ? null
@@ -342,7 +364,7 @@ const runCreateExpense = async (rawArgs, context) => {
 
   const result = await createExpenseService({
     amount: amountPaise,
-    category,
+    category: canonicalCategory,
     description: description || null,
     date,
     idempotency_key: context.idempotencyKey,

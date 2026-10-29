@@ -2,6 +2,7 @@ const { createHash } = require("crypto");
 const { env, hasGeminiCredentials } = require("../config/env");
 const { getClient, generateContent } = require("./gemini.client");
 const { executeTool, toolDeclarations, ToolInputError, toLocalToday } = require("./chat.tools");
+const { EXPENSE_CATEGORIES } = require("../config/categories");
 
 const MAX_TOOL_ITERATIONS = 6;
 const MAX_HISTORY_MESSAGES = 24;
@@ -14,8 +15,12 @@ const SYSTEM_INSTRUCTION = [
   "- Always call `query_expenses` before stating any total, count, or comparison. Never state a number you did not receive from a tool.",
   "- Never invent, estimate, or extrapolate transaction records, totals, or dates.",
   "- To create an expense, call `create_expense` with the amount, category, and date the user gave. If the amount or category is missing, ask a short follow-up question instead of guessing.",
+  `- The only valid categories are: ${EXPENSE_CATEGORIES.join(
+    ", "
+  )}. Always pass one of these exact values as \`category\`.`,
+  "- When a user's spending does not fit a specific category, use the catch-all category 'Other' instead of inventing a new category.",
   "- When the user says 'yesterday', 'this month', 'last month', or similar, pass the matching `period` value to `query_expenses` rather than computing dates yourself.",
-  "- Only use categories that exist. The tool returns `availableCategories`; if a requested category is not present, use the closest real one or ask the user.",
+  "- Only use the categories listed above. If the user names something else, map it to the closest valid category or ask the user which one they mean.",
   "- If two periods need comparing, call `query_expenses` once per period and compare the two returned totals.",
   "- Answer in the user's currency (INR) and keep replies concise. Format amounts as ₹123.45.",
   "- If a tool returns an error, explain what is missing and ask the user for the missing detail. Do not retry the same failing call more than once.",

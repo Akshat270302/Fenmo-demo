@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EXPENSE_CATEGORIES } from "../config/categories.js";
 
 const initialState = {
   amount: "",
@@ -9,7 +10,6 @@ const initialState = {
 
 const ExpenseForm = ({ onCreate, submitting }) => {
   const [formValues, setFormValues] = useState(initialState);
-  const [customCategory, setCustomCategory] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleChange = (event) => {
@@ -21,23 +21,14 @@ const ExpenseForm = ({ onCreate, submitting }) => {
     event.preventDefault();
     setErrorMessage("");
 
-    const isOther = formValues.category === "Other";
-    const resolvedCategory = isOther ? customCategory.trim() : formValues.category;
-
-    if (isOther && !resolvedCategory) {
-      setErrorMessage("Please enter a custom category.");
-      return;
-    }
-
     try {
       await onCreate({
         amount: formValues.amount,
-        category: resolvedCategory,
+        category: formValues.category,
         description: formValues.description,
         date: formValues.date,
       });
       setFormValues(initialState);
-      setCustomCategory("");
     } catch (err) {
       setErrorMessage(err.message || "Failed to create expense");
     }
@@ -78,27 +69,13 @@ const ExpenseForm = ({ onCreate, submitting }) => {
             required
           >
             <option value="">Select category</option>
-            <option value="Food & Dining">Food & Dining</option>
-            <option value="Travel">Travel</option>
-            <option value="Bills">Bills</option>
-            <option value="Health">Health</option>
-            <option value="Entertainment">Entertainment</option>
-            <option value="Other">Other</option>
+            {EXPENSE_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
           </select>
         </label>
-        {formValues.category === "Other" ? (
-          <label className="field">
-            Custom category
-            <input
-              name="customCategory"
-              type="text"
-              placeholder="Enter category"
-              value={customCategory}
-              onChange={(event) => setCustomCategory(event.target.value)}
-              required
-            />
-          </label>
-        ) : null}
         <label className="field span-2">
           Description
           <input

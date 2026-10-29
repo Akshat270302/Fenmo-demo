@@ -14,6 +14,31 @@ queries, and a Gemini-powered conversational assistant.
 - Safe, parameterized tool execution (the model never emits raw SQL)
 - Turn-level idempotency so a retried request cannot double-create an expense
 
+## Categories
+Every expense uses one of six canonical categories, defined once in
+[`src/config/categories.js`](backend/src/config/categories.js):
+
+| Category |
+| --- |
+| `Food & Dining` |
+| `Travel` |
+| `Bills` |
+| `Health` |
+| `Entertainment` |
+| `Other` |
+
+- The list is enforced by `POST /expenses` and by the chatbot's
+  `create_expense` tool. An unsupported category is rejected with
+  `400 VALIDATION_ERROR`.
+- Values are matched case-insensitively and stored with their canonical
+  casing, so `food & dining` and `Food & Dining` never become two categories.
+- Well-known synonyms (`food`, `groceries`, `transport`, `utilities`, ...)
+  are mapped onto their canonical category.
+- `Other` is the catch-all category. It replaces the old free-text "custom
+  category" input.
+- Stored records are never rewritten. Rows created before this list existed
+  keep their original category value, and remain queryable.
+
 ## Tech Stack
 - Node.js
 - Express
@@ -87,7 +112,7 @@ Idempotency-Key: your-unique-key
 ```json
 {
   "amount": 24.5,
-  "category": "Food",
+  "category": "Food & Dining",
   "date": "2026-05-01",
   "note": "Lunch"
 }
@@ -100,7 +125,7 @@ Idempotency-Key: your-unique-key
   "data": {
     "id": 1,
     "amount": 24.5,
-    "category": "Food",
+    "category": "Food & Dining",
     "date": "2026-05-01",
     "note": "Lunch"
   }
@@ -112,7 +137,7 @@ Fetch expenses with optional filters.
 
 **Example request**
 ```http
-GET /expenses?category=Food&startDate=2026-05-01&endDate=2026-05-31
+GET /expenses?category=Food%20%26%20Dining&startDate=2026-05-01&endDate=2026-05-31
 ```
 
 **Example response**
@@ -123,7 +148,7 @@ GET /expenses?category=Food&startDate=2026-05-01&endDate=2026-05-31
     {
       "id": 1,
       "amount": 24.5,
-      "category": "Food",
+      "category": "Food & Dining",
       "date": "2026-05-01",
       "note": "Lunch"
     }

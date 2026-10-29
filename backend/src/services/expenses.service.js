@@ -1,6 +1,11 @@
 const { v4: uuidv4 } = require("uuid");
 const { db } = require("../db");
 const { paiseToRupees } = require("../utils/money");
+const {
+  EXPENSE_CATEGORIES,
+  resolveCanonicalCategory,
+  resolveCategoryAlias,
+} = require("../config/categories");
 
 const getExpenseByIdempotencyKey = (key) => {
   return new Promise((resolve, reject) => {
@@ -129,20 +134,6 @@ const getExpensesService = ({ category }) => {
 // model's arguments are only ever bound as parameter values.
 // ---------------------------------------------------------------------------
 
-const CATEGORY_ALIASES = {
-  food: "Food & Dining",
-  "food & dining": "Food & Dining",
-  "food and dining": "Food & Dining",
-  dining: "Food & Dining",
-  restaurant: "Food & Dining",
-  groceries: "Food & Dining",
-  travel: "Travel",
-  transport: "Travel",
-  clothes: "clothes",
-  clothing: "clothes",
-  apparel: "clothes",
-};
-
 const getDistinctCategoriesService = () => {
   return new Promise((resolve, reject) => {
     db.all(
@@ -166,9 +157,14 @@ const getDistinctCategoriesService = () => {
 };
 
 /**
- * Maps a model-supplied category onto a category that actually exists in the
- * database. Returns `{ category: null }` when nothing matches so the agent can
- * report the real category list instead of querying with a guessed value.
+ * Maps a model-supplied category onto a category that can actually be queried.
+ *
+ * Canonical categories are matched first, then their common synonyms. Stored
+ * rows are never rewritten, so legacy categories that predate the canonical
+ * list are still matched directly to keep those records queryable.
+ *
+ * Returns `{ category: null }` when nothing matches so the agent can report
+ * the real category list instead of querying with a guessed value.
  */
 const resolveCategoryFilter = (requested, availableCategories) => {
   const needle = String(requested || "").trim().toLowerCase();
@@ -177,21 +173,21 @@ const resolveCategoryFilter = (requested, availableCategories) => {
     return { category: null, matched: false };
   }
 
-  const exact = availableCategories.find(
-    (item) => item.category.toLowerCase() === needle
-  );
-  if (exact) {
-    return { category: exact.category, matched: true };
+  const canonical = resolveCanonicalCategory(needle);
+  if (canonical) {
+    return { category: canonical, matched: true };
   }
 
-  const alias = CATEGORY_ALIASES[needle];
+  const alias = resolveCategoryAlias(needle);
   if (alias) {
-    const aliasMatch = availableCategories.find(
-      (item) => item.category.toLowerCase() === alias.toLowerCase()
-    );
-    if (aliasMatch) {
-      return { category: aliasMatch.category, matched: true };
-    }
+    return { category: alias, matched: true };
+  }
+
+  const stored = availableCategories.find(
+    (item) => item.category.toLowerCase() === needle
+  );
+  if (stored) {
+    return { category: stored.category, matched: true };
   }
 
   const partial = availableCategories.find(
@@ -275,7 +271,10 @@ const queryExpensesService = async ({ category, startDate, endDate }) => {
         total: paiseToRupees(item.totalPaise),
       }))
       .sort((a, b) => Number(b.total) - Number(a.total)),
-    availableCategories: availableCategories.map((item) => item.category),
+    // The chatbot is only ever offered the canonical categories. Legacy rows
+    // stay in the database untouched, but the model is not told about them so
+    // it cannot create new records with an unsupported category.
+    availableCategories: [...EXPENSE_CATEGORIES],
     resolvedCategory: resolved.category,
   };
 };

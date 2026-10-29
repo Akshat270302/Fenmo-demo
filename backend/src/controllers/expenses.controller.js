@@ -4,6 +4,10 @@ const {
 } = require("../services/expenses.service");
 const { errorResponse, successResponse } = require("../utils/errors");
 const { paiseToRupees, rupeesToPaise } = require("../utils/money");
+const {
+  EXPENSE_CATEGORIES,
+  resolveCanonicalCategory,
+} = require("../config/categories");
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2}))?$/;
 
@@ -36,6 +40,21 @@ const createExpense = async (req, res) => {
       .json(errorResponse("Category is required", "VALIDATION_ERROR"));
   }
 
+  // Only the canonical categories are accepted. The value is stored with its
+  // canonical casing so "food & dining" and "Food & Dining" never become two
+  // different categories in the database.
+  const canonicalCategory = resolveCanonicalCategory(category);
+  if (!canonicalCategory) {
+    return res.status(400).json(
+      errorResponse(
+        `Unsupported category "${category}". Allowed categories: ${EXPENSE_CATEGORIES.join(
+          ", "
+        )}.`,
+        "VALIDATION_ERROR"
+      )
+    );
+  }
+
   const dateValue = typeof dateInput === "string" ? dateInput.trim() : "";
   if (!dateValue || !isValidIsoDate(dateValue)) {
     return res
@@ -58,7 +77,7 @@ const createExpense = async (req, res) => {
   try {
     const result = await createExpenseService({
       amount: amountPaise,
-      category,
+      category: canonicalCategory,
       description: description || null,
       date: dateValue,
       idempotency_key: idempotencyKey.trim(),

@@ -19,6 +19,31 @@
 - Uses an isolated database via `FENMO_DB_PATH`, so it never touches the
   development database.
 
+## Category Tests
+- Run with Node 18+
+- `npm run test:categories` (from `backend/`) or `node backend/tests/categories.js`
+- Covers the canonical category list and the rules that protect it:
+  - the canonical list is exactly the six supported categories
+  - every canonical category is accepted by the `create_expense` tool
+  - unsupported categories (e.g. `Friends`, `clothes`) are rejected
+  - `Other` is a real category, not a custom free-text one
+  - casing is normalised onto the canonical value
+  - known synonyms (e.g. `groceries`) are stored under their canonical name
+  - the chatbot is only offered the canonical categories
+  - a synonym filter resolves to the canonical category
+- Uses an isolated database via `FENMO_DB_PATH`, so it never touches the
+  development database.
+
+## API Category Tests
+- Run with Node 18+
+- `npm run test:api` (from `backend/`) or `node backend/tests/api-categories.js`
+- Boots the Express app on an ephemeral port against an isolated database and
+  covers the HTTP layer:
+  - every canonical category is accepted by `POST /expenses`
+  - unsupported categories are rejected with `400 VALIDATION_ERROR`
+  - a missing category is reported as missing
+  - only canonical categories are ever written to the database
+
 ## Postman Collection
 - Import [backend/tests/expense-tracker.postman_collection.json](backend/tests/expense-tracker.postman_collection.json)
 - Set `baseUrl` to your API host (default: http://localhost:3000)
